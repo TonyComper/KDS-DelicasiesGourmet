@@ -255,7 +255,7 @@ export default function KitchenDashboard() {
           }
           setShowArchived(prev => !prev);
         }}
-        style={{ backgroundColor: '#343a40', color: 'white', padding: '0.5rem 1rem', marginLeft: '1rem' }}
+        style={{ backgroundColor: '#28a745', color: 'white', padding: '0.5rem 1rem', marginLeft: '1rem' }}
       >
         {showArchived ? 'Hide Archived' : 'View Archived Orders/Messages'}
       </button>
