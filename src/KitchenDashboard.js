@@ -257,7 +257,7 @@ export default function KitchenDashboard() {
         }}
         style={{ backgroundColor: '#28a745', color: 'white', padding: '0.5rem 1rem', marginLeft: '1rem' }}
       >
-        {showArchived ? 'Hide Archived' : 'View Archived Orders/Messages'}
+        {showArchived ? 'Hide Archived' : 'Archived'}
       </button>
 
       {displayedMessages.map(message => (
