@@ -278,6 +278,7 @@ export default function KitchenDashboard() {
           <div key={order.id} style={{ backgroundColor: '#e6f9e6', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px', fontSize: '1.2rem' }}>
             <h2>Order #{order['Order ID']}</h2>
             <p><strong>Customer:</strong> {order['Customer Name']}</p>
+            <p><strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}</p>
             <p><strong>Order Type:</strong> {order['Order Type'] || 'N/A'}</p>
             {order['Order Type']?.toLowerCase() === 'delivery' && (
               <p><strong>Delivery Address:</strong> {order['Delivery Address']}</p>
@@ -334,6 +335,7 @@ export default function KitchenDashboard() {
                 ) : (
                   <>
                     <p><strong>Customer:</strong> {entry['Customer Name']}</p>
+                    <p><strong>Phone:</strong> {entry['Customer Contact Number'] || 'N/A'}</p>
                     <p><strong>Order Type:</strong> {entry['Order Type']}</p>
                     {entry['Delivery Address'] && <p><strong>Delivery Address:</strong> {entry['Delivery Address']}</p>}
                     <p><strong>Pickup Time:</strong> {entry['Pickup Time']}</p>
