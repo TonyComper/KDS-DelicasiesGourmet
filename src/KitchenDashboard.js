@@ -46,7 +46,7 @@ export default function KitchenDashboard() {
   };
 
   const archiveOldOrders = async () => {
-    const res = await fetch('https://qsr-orders-default-rtdb.firebaseio.com/orders.json');
+    const res = await fetch('https://privitipizza41-default-rtdb.firebaseio.com/orders.json');
     const data = await res.json();
     if (!data) return;
 
@@ -58,17 +58,17 @@ export default function KitchenDashboard() {
       const entryDateStr = formatDate(rawDate);
       if (entryDateStr === todayStr) continue;
 
-      const archiveCheck = await fetch(`https://qsr-orders-default-rtdb.firebaseio.com/archive/${entryDateStr}/${id}.json`);
+      const archiveCheck = await fetch(`https://privitipizza41-default-rtdb.firebaseio.com/archive/${entryDateStr}/${id}.json`);
       const alreadyArchived = await archiveCheck.json();
       if (alreadyArchived) continue;
 
-      await fetch(`https://qsr-orders-default-rtdb.firebaseio.com/archive/${entryDateStr}/${id}.json`, {
+      await fetch(`https://privitipizza41-default-rtdb.firebaseio.com/archive/${entryDateStr}/${id}.json`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...entry, Archived: true })
       });
 
-      await fetch(`https://qsr-orders-default-rtdb.firebaseio.com/orders/${id}.json`, {
+      await fetch(`https://privitipizza41-default-rtdb.firebaseio.com/orders/${id}.json`, {
         method: 'DELETE'
       });
 
@@ -95,7 +95,7 @@ export default function KitchenDashboard() {
     if (!audioEnabled) return;
 
     const fetchOrders = async () => {
-      const res = await fetch('https://qsr-orders-default-rtdb.firebaseio.com/orders.json');
+      const res = await fetch('https://privitipizza41-default-rtdb.firebaseio.com/orders.json');
       const data = await res.json();
 
       const orderArray = Object.entries(data || {}).map(([id, order]) => ({ id, ...order }));
@@ -156,7 +156,7 @@ export default function KitchenDashboard() {
       localStorage.setItem('acceptedOrders', JSON.stringify(Array.from(updated)));
       return updated;
     });
-    await fetch(`https://qsr-orders-default-rtdb.firebaseio.com/orders/${id}.json`, {
+    await fetch(`https://privitipizza41-default-rtdb.firebaseio.com/orders/${id}.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ "Accepted At": timestamp })
@@ -219,7 +219,7 @@ export default function KitchenDashboard() {
 
   return (
     <div style={{ padding: '1rem', fontFamily: 'Arial' }}>
-      <h1>Orders and Messages - California Sandwiches Winston Churchill</h1>
+      <h1>Orders and Messages - Priviti Pizza 41st Street</h1>
       <p><strong>Date:</strong> {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
 
       <button
@@ -239,7 +239,7 @@ export default function KitchenDashboard() {
       <button
         onClick={async () => {
           if (!showArchived) {
-            const res = await fetch('https://qsr-orders-default-rtdb.firebaseio.com/archive.json');
+            const res = await fetch('https://privitipizza41-default-rtdb.firebaseio.com/archive.json');
             const data = await res.json();
             const allArchived = [];
             Object.entries(data || {}).forEach(([dateKey, entries]) => {
