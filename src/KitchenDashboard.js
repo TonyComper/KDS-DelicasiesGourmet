@@ -287,7 +287,7 @@ export default function KitchenDashboard() {
 
       <div style={{ display: 'grid', gap: '1rem', marginTop: '2rem' }}>
         {displayedOrders.map(order => (
-          <div key={order.id} style={{ backgroundColor: '#e6f9e6', border: '1px solid '#ccc', padding: '1.5rem', borderRadius: '8px', fontSize: '1.2rem' }}>
+          <div key={order.id} style={{ backgroundColor: '#e6f9e6', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px', fontSize: '1.2rem' }}>
             <h2>Order #{order['Order ID']}</h2>
             <p><strong>Customer:</strong> {order['Customer Name']}</p>
             <p><strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}</p>
