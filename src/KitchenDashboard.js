@@ -15,6 +15,9 @@ export default function KitchenDashboard() {
   const alarmAudio = useRef(null);
   const messageAudio = useRef(null);
 
+  // ✅ Location filter (minimal addition)
+  const LOCATION_ID = 'PP41ST';
+
   const isChrome = () => {
     const userAgent = navigator.userAgent;
     return /Chrome/.test(userAgent) && !/Edge|Edg|OPR|Brave|Chromium/.test(userAgent);
@@ -53,6 +56,9 @@ export default function KitchenDashboard() {
     const todayStr = formatDate(new Date().toString());
 
     for (const [id, entry] of Object.entries(data)) {
+      // ✅ Only archive entries for this location
+      if (entry?.locationID !== LOCATION_ID) continue;
+
       const rawDate = entry['Order Date'] || entry['Message Date'];
       if (!rawDate) continue;
       const entryDateStr = formatDate(rawDate);
@@ -98,7 +104,10 @@ export default function KitchenDashboard() {
       const res = await fetch('https://privitipizza41-default-rtdb.firebaseio.com/orders.json');
       const data = await res.json();
 
-      const orderArray = Object.entries(data || {}).map(([id, order]) => ({ id, ...order }));
+      // ✅ Build array and filter to this location only
+      let orderArray = Object.entries(data || {}).map(([id, order]) => ({ id, ...order }));
+      orderArray = orderArray.filter(o => o?.locationID === LOCATION_ID);
+
       orderArray.sort((a, b) =>
         new Date(formatDate(b['Order Date'] || b['Message Date'])) -
         new Date(formatDate(a['Order Date'] || a['Message Date']))
@@ -219,7 +228,7 @@ export default function KitchenDashboard() {
 
   return (
     <div style={{ padding: '1rem', fontFamily: 'Arial' }}>
-      <h1>Orders and Messages - Priviti Pizza 41st Street</h1>
+      <h1>Orders and Messages - Priviti Pizza 41st</h1>
       <p><strong>Date:</strong> {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
 
       <button
@@ -244,7 +253,10 @@ export default function KitchenDashboard() {
             const allArchived = [];
             Object.entries(data || {}).forEach(([dateKey, entries]) => {
               Object.entries(entries).forEach(([id, entry]) => {
-                allArchived.push({ ...entry, id, archiveDate: dateKey });
+                // ✅ Only include this location’s archived entries
+                if (entry?.locationID === LOCATION_ID) {
+                  allArchived.push({ ...entry, id, archiveDate: dateKey });
+                }
               });
             });
             allArchived.sort((a, b) =>
@@ -275,7 +287,7 @@ export default function KitchenDashboard() {
 
       <div style={{ display: 'grid', gap: '1rem', marginTop: '2rem' }}>
         {displayedOrders.map(order => (
-          <div key={order.id} style={{ backgroundColor: '#e6f9e6', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px', fontSize: '1.2rem' }}>
+          <div key={order.id} style={{ backgroundColor: '#e6f9e6', border: '1px solid '#ccc', padding: '1.5rem', borderRadius: '8px', fontSize: '1.2rem' }}>
             <h2>Order #{order['Order ID']}</h2>
             <p><strong>Customer:</strong> {order['Customer Name']}</p>
             <p><strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}</p>
