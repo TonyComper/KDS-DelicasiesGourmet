@@ -15,7 +15,7 @@ export default function KitchenDashboard() {
   const alarmAudio = useRef(null);
   const messageAudio = useRef(null);
 
-  // ✅ Location filter (minimal addition)
+  // ✅ Location filter
   const LOCATION_ID = 'PP41ST';
 
   const isChrome = () => {
@@ -56,7 +56,6 @@ export default function KitchenDashboard() {
     const todayStr = formatDate(new Date().toString());
 
     for (const [id, entry] of Object.entries(data)) {
-      // ✅ Only archive entries for this location
       if (entry?.locationID !== LOCATION_ID) continue;
 
       const rawDate = entry['Order Date'] || entry['Message Date'];
@@ -104,7 +103,6 @@ export default function KitchenDashboard() {
       const res = await fetch('https://privitipizza41-default-rtdb.firebaseio.com/orders.json');
       const data = await res.json();
 
-      // ✅ Build array and filter to this location only
       let orderArray = Object.entries(data || {}).map(([id, order]) => ({ id, ...order }));
       orderArray = orderArray.filter(o => o?.locationID === LOCATION_ID);
 
@@ -253,7 +251,6 @@ export default function KitchenDashboard() {
             const allArchived = [];
             Object.entries(data || {}).forEach(([dateKey, entries]) => {
               Object.entries(entries).forEach(([id, entry]) => {
-                // ✅ Only include this location’s archived entries
                 if (entry?.locationID === LOCATION_ID) {
                   allArchived.push({ ...entry, id, archiveDate: dateKey });
                 }
@@ -293,7 +290,14 @@ export default function KitchenDashboard() {
             <p><strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}</p>
             <p><strong>Order Type:</strong> {order['Order Type'] || 'N/A'}</p>
             {order['Order Type']?.toLowerCase() === 'delivery' && (
-              <p><strong>Delivery Address:</strong> {order['Delivery Address']}</p>
+              <>
+                <p><strong>Delivery Address:</strong> {order['Delivery Address']}</p>
+                <p><strong>Order Instructions:</strong> {order['Order Instructions'] || 'N/A'}</p>
+                <p><strong>Status:</strong> {order.Status || 'N/A'}</p>
+                <p><strong>Paid At:</strong> {order.PaidAt || 'N/A'}</p>
+                <p><strong>Payment ID:</strong> {order.paymentIntentId || 'N/A'}</p>
+                <p><strong>Checkout Session ID:</strong> {order.checkoutSessionId || 'N/A'}</p>
+              </>
             )}
             <p><strong>Order Date:</strong> {order['Order Date']}</p>
             {!showAccepted && order['Order Date'] && (
@@ -349,7 +353,19 @@ export default function KitchenDashboard() {
                     <p><strong>Customer:</strong> {entry['Customer Name']}</p>
                     <p><strong>Phone:</strong> {entry['Customer Contact Number'] || 'N/A'}</p>
                     <p><strong>Order Type:</strong> {entry['Order Type']}</p>
-                    {entry['Delivery Address'] && <p><strong>Delivery Address:</strong> {entry['Delivery Address']}</p>}
+                    {entry['Order Type']?.toLowerCase() === 'delivery' && (
+                      <>
+                        <p><strong>Delivery Address:</strong> {entry['Delivery Address']}</p>
+                        <p><strong>Order Instructions:</strong> {entry['Order Instructions'] || 'N/A'}</p>
+                        <p><strong>Status:</strong> {entry.Status || 'N/A'}</p>
+                        <p><strong>Paid At:</strong> {entry.PaidAt || 'N/A'}</p>
+                        <p><strong>Payment ID:</strong> {entry.paymentIntentId || 'N/A'}</p>
+                        <p><strong>Checkout Session ID:</strong> {entry.checkoutSessionId || 'N/A'}</p>
+                      </>
+                    )}
+                    {entry['Order Type']?.toLowerCase() !== 'delivery' && entry['Delivery Address'] && (
+                      <p><strong>Delivery Address:</strong> {entry['Delivery Address']}</p>
+                    )}
                     <p><strong>Pickup Time:</strong> {entry['Pickup Time']}</p>
                     <p><strong>Total:</strong> {entry['Total Price']}</p>
                     <ul>
