@@ -229,7 +229,7 @@ export default function KitchenDashboard() {
       <h1>Orders and Messages - Delicacies Gourmet</h1>
       <p><strong>Date:</strong> {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
 
-      {/* Buttons */}
+      {/* Control buttons */}
       <button
         onClick={() => setShowAccepted(prev => !prev)}
         style={{ marginRight: '1rem', backgroundColor: 'red', color: 'white', padding: '0.5rem 1rem' }}
@@ -279,7 +279,12 @@ export default function KitchenDashboard() {
           <p><strong>Caller Phone:</strong> {message['Caller_Phone'] || 'N/A'}</p>
           <p><strong>Reason:</strong> {message['Message_Reason'] || 'N/A'}</p>
           {!showReadMessages && (
-            <button onClick={() => markMessageAsRead(message.id)} style={{ marginTop: '0.5rem', backgroundColor: '#d6336c', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px' }}>Mark As Read</button>
+            <button
+              onClick={() => markMessageAsRead(message.id)}
+              style={{ marginTop: '0.5rem', backgroundColor: '#d6336c', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px' }}
+            >
+              Mark As Read
+            </button>
           )}
         </div>
       ))}
@@ -293,29 +298,46 @@ export default function KitchenDashboard() {
             <p><strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}</p>
             <p><strong>Order Type:</strong> {order['Order Type'] || 'N/A'}</p>
 
-            {/* ✅ Status message for PICK UP orders (exact match "PICK UP") */}
+            {/* Delivery details (unchanged) */}
+            {order['Order Type']?.toLowerCase() === 'delivery' && (
+              <>
+                <p><strong>Delivery Address:</strong> {order['Delivery Address']}</p>
+                <p><strong>Order Instructions:</strong> {order['Order Instructions'] || 'N/A'}</p>
+                <p><strong>Status:</strong> {order.Status || 'N/A'}</p>
+                <p><strong>Paid At:</strong> {order.PaidAt || 'N/A'}</p>
+                <p><strong>Payment ID:</strong> {order.paymentIntentId || 'N/A'}</p>
+                <p><strong>Checkout Session ID:</strong> {order.checkoutSessionId || 'N/A'}</p>
+              </>
+            )}
+
+            {/* ✅ Status message with color badge for PICK UP orders */}
             {order['Order Type'] === 'PICK UP' && (() => {
               const status = (order.status || '').toUpperCase().trim();
               let statusMessage = '';
               let statusColor = 'black';
+              let badge = '⚪';
 
               if (!status || status === 'N/A' || status === 'NOT PAID') {
                 statusMessage = 'Order Not Paid';
                 statusColor = '#f0ad4e'; // yellow/orange
+                badge = '🟡';
               } else if (status === 'PENDING') {
                 statusMessage = 'Customer Completing Payment - Stand By';
                 statusColor = '#ffc107'; // amber
+                badge = '🟠';
               } else if (status === 'PAID') {
                 statusMessage = 'Customer Has Completed Payment - Proceed with Order';
                 statusColor = '#28a745'; // green
+                badge = '🟢';
               } else if (status === 'CANCELED' || status === 'FAILED') {
                 statusMessage = 'Payment Failed - Contact the Customer to Confirm Order';
                 statusColor = '#dc3545'; // red
+                badge = '🔴';
               }
 
               return (
                 <p style={{ color: statusColor, fontWeight: 'bold', marginTop: '0.5rem' }}>
-                  <strong>Status:</strong> {statusMessage}
+                  <strong>Status:</strong> {badge} {statusMessage}
                 </p>
               );
             })()}
