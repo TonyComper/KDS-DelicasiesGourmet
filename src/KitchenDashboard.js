@@ -229,9 +229,62 @@ export default function KitchenDashboard() {
       <h1>Orders and Messages - Delicacies Gourmet</h1>
       <p><strong>Date:</strong> {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
 
-      {/* Existing buttons omitted for brevity */}
-      {/* ... */}
+      {/* ✅ Buttons (present and unchanged) */}
+      <button
+        onClick={() => setShowAccepted(prev => !prev)}
+        style={{ marginRight: '1rem', backgroundColor: 'red', color: 'white', padding: '0.5rem 1rem' }}
+      >
+        {showAccepted ? 'Hide Accepted Orders' : 'View Accepted Orders'}
+      </button>
 
+      <button
+        onClick={() => setShowReadMessages(prev => !prev)}
+        style={{ backgroundColor: '#6c757d', color: 'white', padding: '0.5rem 1rem' }}
+      >
+        {showReadMessages ? 'Hide Read Messages' : 'View Read Messages'}
+      </button>
+
+      <button
+        onClick={async () => {
+          if (!showArchived) {
+            const res = await fetch('https://privitipizza41-default-rtdb.firebaseio.com/archive.json');
+            const data = await res.json();
+            const allArchived = [];
+            Object.entries(data || {}).forEach(([dateKey, entries]) => {
+              Object.entries(entries).forEach(([id, entry]) => {
+                if (entry?.locationID === LOCATION_ID) {
+                  allArchived.push({ ...entry, id, archiveDate: dateKey });
+                }
+              });
+            });
+            allArchived.sort((a, b) =>
+              new Date(b['Order Date'] || b['Message Date']) -
+              new Date(a['Order Date'] || a['Message Date'])
+            );
+            setArchivedEntries(allArchived);
+          }
+          setShowArchived(prev => !prev);
+        }}
+        style={{ backgroundColor: '#28a745', color: 'white', padding: '0.5rem 1rem', marginLeft: '1rem' }}
+      >
+        {showArchived ? 'Hide Archived' : 'Archived'}
+      </button>
+
+      {/* Messages */}
+      {displayedMessages.map(message => (
+        <div key={message.id} style={{ backgroundColor: '#fff3f4', border: '2px solid #ff4081', padding: '1rem', borderRadius: '8px', marginTop: '1rem' }}>
+          <h2>📨 {showReadMessages ? 'Read Message' : 'New Message'}</h2>
+          <p><strong>Time:</strong> {message['Message Date'] || 'N/A'}</p>
+          <p><strong>Caller Name:</strong> {message['Caller_Name'] || 'N/A'}</p>
+          <p><strong>Caller Phone:</strong> {message['Caller_Phone'] || 'N/A'}</p>
+          <p><strong>Reason:</strong> {message['Message_Reason'] || 'N/A'}</p>
+          {!showReadMessages && (
+            <button onClick={() => markMessageAsRead(message.id)} style={{ marginTop: '0.5rem', backgroundColor: '#d6336c', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px' }}>Mark As Read</button>
+          )}
+        </div>
+      ))}
+
+      {/* Orders */}
       <div style={{ display: 'grid', gap: '1rem', marginTop: '2rem' }}>
         {displayedOrders.map(order => (
           <div key={order.id} style={{ backgroundColor: '#e6f9e6', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px', fontSize: '1.2rem' }}>
@@ -240,7 +293,7 @@ export default function KitchenDashboard() {
             <p><strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}</p>
             <p><strong>Order Type:</strong> {order['Order Type'] || 'N/A'}</p>
 
-            {/* ✅ Status message for pickup orders */}
+            {/* ✅ Status message for PICK UP orders (exact match) */}
             {order['Order Type'] === 'PICK UP' && (() => {
               const status = (order.status || '').toUpperCase().trim();
               let statusMessage = '';
@@ -249,25 +302,24 @@ export default function KitchenDashboard() {
               if (!status || status === 'N/A' || status === 'NOT PAID') {
                 statusMessage = 'Order Not Paid';
                 statusColor = '#f0ad4e';
-              } else if (['PENDING'].includes(status)) {
+              } else if (status === 'PENDING') {
                 statusMessage = 'Customer Completing Payment - Stand By';
                 statusColor = '#ffc107';
               } else if (status === 'PAID') {
                 statusMessage = 'Customer Has Completed Payment - Proceed with Order';
                 statusColor = '#28a745';
-              } else if (['CANCELED', 'FAILED'].includes(status)) {
+              } else if (status === 'CANCELED' || status === 'FAILED') {
                 statusMessage = 'Payment Failed - Contact the Customer to Confirm Order';
                 statusColor = '#dc3545';
               }
 
               return (
-                <p style={{ color: statusColor, fontWeight: 'bold' }}>
+                <p style={{ color: statusColor, fontWeight: 'bold', marginTop: '0.5rem' }}>
                   <strong>Status:</strong> {statusMessage}
                 </p>
               );
             })()}
 
-            {/* Existing order details unchanged below */}
             <p><strong>Order Date:</strong> {order['Order Date']}</p>
             {!showAccepted && order['Order Date'] && (
               <p><strong>Elapsed Time:</strong> <span style={{ color: 'goldenrod' }}>{getElapsedTime(order['Order Date'])}</span></p>
@@ -302,6 +354,53 @@ export default function KitchenDashboard() {
           </div>
         ))}
       </div>
+
+      {showArchived && (
+        <div style={{ marginTop: '2rem' }}>
+          <h2>📦 Archived Orders & Messages</h2>
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {archivedEntries.map(entry => (
+              <div key={entry.id} style={{ backgroundColor: '#f0f0f0', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px' }}>
+                <h3>{entry['Order Type'] === 'MESSAGE' ? '📨 Message' : `Order #${entry['Order ID'] || entry.id}`}</h3>
+                <p><strong>Date:</strong> {entry['Order Date'] || entry['Message Date'] || 'N/A'}</p>
+                {entry['Order Type'] === 'MESSAGE' ? (
+                  <>
+                    <p><strong>Caller Name:</strong> {entry['Caller_Name']}</p>
+                    <p><strong>Caller Phone:</strong> {entry['Caller_Phone']}</p>
+                    <p><strong>Reason:</strong> {entry['Message_Reason']}</p>
+                  </>
+                ) : (
+                  <>
+                    <p><strong>Customer:</strong> {entry['Customer Name']}</p>
+                    <p><strong>Phone:</strong> {entry['Customer Contact Number'] || 'N/A'}</p>
+                    <p><strong>Order Type:</strong> {entry['Order Type']}</p>
+                    {entry['Order Type']?.toLowerCase() === 'delivery' && (
+                      <>
+                        <p><strong>Delivery Address:</strong> {entry['Delivery Address']}</p>
+                        <p><strong>Order Instructions:</strong> {entry['Order Instructions'] || 'N/A'}</p>
+                        <p><strong>Status:</strong> {entry.Status || 'N/A'}</p>
+                        <p><strong>Paid At:</strong> {entry.PaidAt || 'N/A'}</p>
+                        <p><strong>Payment ID:</strong> {entry.paymentIntentId || 'N/A'}</p>
+                        <p><strong>Checkout Session ID:</strong> {entry.checkoutSessionId || 'N/A'}</p>
+                      </>
+                    )}
+                    {entry['Order Type']?.toLowerCase() !== 'delivery' && entry['Delivery Address'] && (
+                      <p><strong>Delivery Address:</strong> {entry['Delivery Address']}</p>
+                    )}
+                    <p><strong>Pickup Time:</strong> {entry['Pickup Time']}</p>
+                    <p><strong>Total:</strong> {entry['Total Price']}</p>
+                    <ul>
+                      {entry['Order Items']?.split(',').map((item, index) => (
+                        <li key={index}>{item.trim()}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
