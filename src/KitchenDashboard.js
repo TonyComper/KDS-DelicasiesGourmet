@@ -241,7 +241,7 @@ export default function KitchenDashboard() {
             <p><strong>Order Type:</strong> {order['Order Type'] || 'N/A'}</p>
 
             {/* ✅ Status message for pickup orders */}
-            {order['Order Type']?.toLowerCase() === 'pickup' && (() => {
+            {order['Order Type'] === 'PICK UP' && (() => {
               const status = (order.status || '').toUpperCase().trim();
               let statusMessage = '';
               let statusColor = 'black';
