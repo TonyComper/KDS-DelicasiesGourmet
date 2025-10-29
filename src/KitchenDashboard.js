@@ -229,7 +229,7 @@ export default function KitchenDashboard() {
       <h1>Orders and Messages - Delicacies Gourmet</h1>
       <p><strong>Date:</strong> {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
 
-      {/* ✅ Buttons (present and unchanged) */}
+      {/* Buttons */}
       <button
         onClick={() => setShowAccepted(prev => !prev)}
         style={{ marginRight: '1rem', backgroundColor: 'red', color: 'white', padding: '0.5rem 1rem' }}
@@ -293,7 +293,7 @@ export default function KitchenDashboard() {
             <p><strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}</p>
             <p><strong>Order Type:</strong> {order['Order Type'] || 'N/A'}</p>
 
-            {/* ✅ Status message for PICK UP orders (exact match) */}
+            {/* ✅ Status message for PICK UP orders (exact match "PICK UP") */}
             {order['Order Type'] === 'PICK UP' && (() => {
               const status = (order.status || '').toUpperCase().trim();
               let statusMessage = '';
@@ -301,16 +301,16 @@ export default function KitchenDashboard() {
 
               if (!status || status === 'N/A' || status === 'NOT PAID') {
                 statusMessage = 'Order Not Paid';
-                statusColor = '#f0ad4e';
+                statusColor = '#f0ad4e'; // yellow/orange
               } else if (status === 'PENDING') {
                 statusMessage = 'Customer Completing Payment - Stand By';
-                statusColor = '#ffc107';
+                statusColor = '#ffc107'; // amber
               } else if (status === 'PAID') {
                 statusMessage = 'Customer Has Completed Payment - Proceed with Order';
-                statusColor = '#28a745';
+                statusColor = '#28a745'; // green
               } else if (status === 'CANCELED' || status === 'FAILED') {
                 statusMessage = 'Payment Failed - Contact the Customer to Confirm Order';
-                statusColor = '#dc3545';
+                statusColor = '#dc3545'; // red
               }
 
               return (
