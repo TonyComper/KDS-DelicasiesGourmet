@@ -183,7 +183,7 @@ export default function KitchenDashboard() {
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <h1>Orders and Messages Dashboard</h1>
         <p>Please click the button below to start the dashboard and enable sound alerts.</p>
-        <p>(c) 2025 RT7 USA Incorporated. All rights reserved.</p>
+        <p>(c) 2026 AvaiaConnects.com - All rights reserved.</p>
         <button
           onClick={async () => {
             try {
