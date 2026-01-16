@@ -48,6 +48,243 @@ export default function KitchenDashboard() {
     return `${minutes}m ${seconds}s ago`;
   };
 
+  // ✅ PRINTING (Sunmi V2 Pro, strict 58mm)
+  const escapeHtml = (s) => {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const buildPickupStatusLine = (order) => {
+    const status = (order?.status || '').toUpperCase().trim();
+    if (!status || status === 'N/A' || status === 'NOT PAID') return 'NOT PAID';
+    if (status === 'PENDING') return 'PENDING (Customer paying)';
+    if (status === 'PAID') return 'PAID';
+    if (status === 'CANCELED' || status === 'FAILED') return 'PAYMENT FAILED';
+    return status;
+  };
+
+  const buildReceiptHtml = (entry) => {
+    const isMessage = entry?.['Order Type'] === 'MESSAGE';
+    const orderType = entry?.['Order Type'] || 'N/A';
+
+    const title = isMessage ? 'MESSAGE' : 'ORDER';
+    const orderNumberLine = isMessage
+      ? `Message ID: ${escapeHtml(entry?.id || '')}`
+      : `Order #: ${escapeHtml(entry?.['Order ID'] || entry?.id || '')}`;
+
+    const timeLine = escapeHtml(entry?.['Order Date'] || entry?.['Message Date'] || '');
+    const customerName = escapeHtml(isMessage ? entry?.['Caller_Name'] : entry?.['Customer Name']);
+    const phone = escapeHtml(isMessage ? entry?.['Caller_Phone'] : entry?.['Customer Contact Number']);
+    const total = escapeHtml(entry?.['Total Price']);
+    const pickupTime = escapeHtml(entry?.['Pickup Time']);
+    const deliveryAddress = escapeHtml(entry?.['Delivery Address']);
+    const instructions = escapeHtml(entry?.['Order Instructions']);
+    const reason = escapeHtml(entry?.['Message_Reason']);
+
+    const items = (entry?.['Order Items'] || '')
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .map((x) => `<div class="item">• ${escapeHtml(x)}</div>`)
+      .join('');
+
+    const pickupStatusBlock =
+      !isMessage && String(orderType).toUpperCase() === 'PICK UP'
+        ? `<div class="row"><span class="label">STATUS:</span><span class="value">${escapeHtml(buildPickupStatusLine(entry))}</span></div>`
+        : '';
+
+    const deliveryBlock =
+      !isMessage && String(orderType).toLowerCase() === 'delivery'
+        ? `
+          <div class="hr"></div>
+          <div class="label">DELIVERY ADDRESS</div>
+          <div class="wrap">${deliveryAddress || 'N/A'}</div>
+          <div class="label" style="margin-top:6px;">INSTRUCTIONS</div>
+          <div class="wrap">${instructions || 'N/A'}</div>
+        `
+        : '';
+
+    const pickupBlock =
+      !isMessage && String(orderType).toUpperCase() === 'PICK UP'
+        ? `
+          <div class="hr"></div>
+          <div class="label">PICKUP TIME</div>
+          <div class="big">${pickupTime || 'N/A'}</div>
+        `
+        : '';
+
+    const messageBlock =
+      isMessage
+        ? `
+          <div class="hr"></div>
+          <div class="label">REASON</div>
+          <div class="wrap">${reason || 'N/A'}</div>
+        `
+        : '';
+
+    const itemsBlock =
+      !isMessage
+        ? `
+          <div class="hr"></div>
+          <div class="label">ITEMS</div>
+          <div class="items">${items || '<div class="item">N/A</div>'}</div>
+        `
+        : '';
+
+    const totalBlock =
+      !isMessage
+        ? `
+          <div class="hr"></div>
+          <div class="row">
+            <span class="label">TOTAL</span>
+            <span class="big">${total || 'N/A'}</span>
+          </div>
+        `
+        : '';
+
+    // ✅ STRICT 58mm + bigger Order # / Type / Customer name
+    const html = `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>${escapeHtml(title)}</title>
+          <style>
+            @page { margin: 4mm; }
+            body {
+              font-family: Arial, sans-serif;
+              font-size: 11px;
+              color: #000;
+            }
+
+            /* Strict 58mm-safe width */
+            .receipt {
+              width: 220px;
+            }
+
+            .center { text-align: center; }
+            .hr { border-top: 1px dashed #000; margin: 8px 0; }
+
+            .title {
+              font-size: 15px;
+              font-weight: 800;
+              letter-spacing: 0.3px;
+            }
+
+            /* Bigger lines requested */
+            .orderNo {
+              font-size: 15px;
+              font-weight: 900;
+              margin-top: 6px;
+            }
+
+            .typeBig {
+              font-size: 14px;
+              font-weight: 900;
+              margin-top: 4px;
+            }
+
+            .customerBig {
+              font-size: 14px;
+              font-weight: 900;
+              margin-top: 2px;
+            }
+
+            .label { font-weight: 800; }
+            .big { font-size: 14px; font-weight: 900; }
+
+            .row {
+              display: flex;
+              justify-content: space-between;
+              gap: 8px;
+              margin: 2px 0;
+            }
+
+            .value { font-weight: 700; }
+
+            .items { margin-top: 4px; }
+            .item { margin: 2px 0; }
+
+            .mono {
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            }
+
+            /* Ensure long lines wrap safely on 58mm */
+            .wrap, .item, .mono {
+              word-wrap: break-word;
+              overflow-wrap: anywhere;
+            }
+
+            .footer {
+              margin-top: 10px;
+              font-size: 10px;
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body onload="window.print(); setTimeout(()=>window.close(), 300);">
+          <div class="receipt">
+
+            <div class="center title">${escapeHtml(title)}</div>
+
+            <div class="center orderNo">${escapeHtml(orderNumberLine)}</div>
+
+            <div class="center typeBig">TYPE: ${escapeHtml(orderType)}</div>
+
+            <div class="hr"></div>
+
+            <div class="label">${isMessage ? 'CALLER' : 'CUSTOMER'}</div>
+            <div class="customerBig wrap">${customerName || 'N/A'}</div>
+
+            <div class="row">
+              <span class="label">PHONE</span>
+              <span class="mono">${phone || 'N/A'}</span>
+            </div>
+
+            <div class="row">
+              <span class="label">${isMessage ? 'TIME' : 'ORDER TIME'}</span>
+              <span class="mono wrap" style="text-align:right;">${timeLine || ''}</span>
+            </div>
+
+            ${pickupStatusBlock}
+            ${messageBlock}
+            ${deliveryBlock}
+            ${pickupBlock}
+            ${itemsBlock}
+            ${totalBlock}
+
+            <div class="hr"></div>
+            <div class="footer">© 2026 Avaiaconnects.com</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return html;
+  };
+
+  const printEntry = (entry) => {
+    try {
+      const html = buildReceiptHtml(entry);
+      const w = window.open('', '_blank', 'width=400,height=600');
+      if (!w) {
+        alert('Pop-up blocked. Please allow pop-ups to print.');
+        return;
+      }
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    } catch (e) {
+      console.warn('❌ Print failed:', e);
+      alert('Print failed. Check browser settings on the POS device.');
+    }
+  };
+
   const archiveOldOrders = async () => {
     const res = await fetch('https://privitipizza41-default-rtdb.firebaseio.com/orders.json');
     const data = await res.json();
@@ -183,7 +420,7 @@ export default function KitchenDashboard() {
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <h1>Orders and Messages Dashboard</h1>
         <p>Please click the button below to start the dashboard and enable sound alerts.</p>
-        <p>(c) 2026 AvaiaConnects.com - All rights reserved.</p>
+        <p>(c) 2026 AvaiaConnects.com (RT7 USA Incorporated). All rights reserved.</p>
         <button
           onClick={async () => {
             try {
@@ -273,7 +510,15 @@ export default function KitchenDashboard() {
       {/* Messages */}
       {displayedMessages.map(message => (
         <div key={message.id} style={{ backgroundColor: '#fff3f4', border: '2px solid #ff4081', padding: '1rem', borderRadius: '8px', marginTop: '1rem' }}>
-          <h2>📨 {showReadMessages ? 'Read Message' : 'New Message'}</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+            <h2 style={{ margin: 0 }}>📨 {showReadMessages ? 'Read Message' : 'New Message'}</h2>
+            <button
+              onClick={() => printEntry(message)}
+              style={{ backgroundColor: '#0d6efd', color: 'white', padding: '0.4rem 0.8rem', border: 'none', borderRadius: '4px' }}
+            >
+              PRINT
+            </button>
+          </div>
           <p><strong>Time:</strong> {message['Message Date'] || 'N/A'}</p>
           <p><strong>Caller Name:</strong> {message['Caller_Name'] || 'N/A'}</p>
           <p><strong>Caller Phone:</strong> {message['Caller_Phone'] || 'N/A'}</p>
@@ -293,7 +538,16 @@ export default function KitchenDashboard() {
       <div style={{ display: 'grid', gap: '1rem', marginTop: '2rem' }}>
         {displayedOrders.map(order => (
           <div key={order.id} style={{ backgroundColor: '#e6f9e6', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px', fontSize: '1.2rem' }}>
-            <h2>Order #{order['Order ID']}</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+              <h2 style={{ margin: 0 }}>Order #{order['Order ID']}</h2>
+              <button
+                onClick={() => printEntry(order)}
+                style={{ backgroundColor: '#0d6efd', color: 'white', padding: '0.4rem 0.8rem', border: 'none', borderRadius: '4px' }}
+              >
+                PRINT
+              </button>
+            </div>
+
             <p><strong>Customer:</strong> {order['Customer Name']}</p>
             <p><strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}</p>
             <p><strong>Order Type:</strong> {order['Order Type'] || 'N/A'}</p>
@@ -319,19 +573,19 @@ export default function KitchenDashboard() {
 
               if (!status || status === 'N/A' || status === 'NOT PAID') {
                 statusMessage = 'Order Not Paid';
-                statusColor = '#f0ad4e'; // yellow/orange
+                statusColor = '#f0ad4e';
                 badge = '🟡';
               } else if (status === 'PENDING') {
                 statusMessage = 'Customer Completing Payment - Stand By';
-                statusColor = '#ffc107'; // amber
+                statusColor = '#ffc107';
                 badge = '🟠';
               } else if (status === 'PAID') {
                 statusMessage = 'Customer Has Completed Payment - Proceed with Order';
-                statusColor = '#28a745'; // green
+                statusColor = '#28a745';
                 badge = '🟢';
               } else if (status === 'CANCELED' || status === 'FAILED') {
                 statusMessage = 'Payment Failed - Contact the Customer to Confirm Order';
-                statusColor = '#dc3545'; // red
+                statusColor = '#dc3545';
                 badge = '🔴';
               }
 
@@ -383,7 +637,16 @@ export default function KitchenDashboard() {
           <div style={{ display: 'grid', gap: '1rem' }}>
             {archivedEntries.map(entry => (
               <div key={entry.id} style={{ backgroundColor: '#f0f0f0', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px' }}>
-                <h3>{entry['Order Type'] === 'MESSAGE' ? '📨 Message' : `Order #${entry['Order ID'] || entry.id}`}</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
+                  <h3 style={{ margin: 0 }}>{entry['Order Type'] === 'MESSAGE' ? '📨 Message' : `Order #${entry['Order ID'] || entry.id}`}</h3>
+                  <button
+                    onClick={() => printEntry(entry)}
+                    style={{ backgroundColor: '#0d6efd', color: 'white', padding: '0.4rem 0.8rem', border: 'none', borderRadius: '4px' }}
+                  >
+                    PRINT
+                  </button>
+                </div>
+
                 <p><strong>Date:</strong> {entry['Order Date'] || entry['Message Date'] || 'N/A'}</p>
                 {entry['Order Type'] === 'MESSAGE' ? (
                   <>
