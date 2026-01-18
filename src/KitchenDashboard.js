@@ -15,7 +15,7 @@ export default function KitchenDashboard() {
   const alarmAudio = useRef(null);
   const messageAudio = useRef(null);
 
-  // ✅ Location filter
+  // ✅ Location filter (Delicacies Gourmet)
   const LOCATION_ID = 'DELGMT';
 
   const isChrome = () => {
@@ -48,9 +48,11 @@ export default function KitchenDashboard() {
     return `${minutes}m ${seconds}s ago`;
   };
 
-  // ✅ PRINTING (Sunmi V2 Pro, strict 58mm)
+  // =========================
+  // ✅ PRINTING (receipt)
+  // =========================
   const escapeHtml = (s) => {
-    return String(s || '')
+    return String(s ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -58,6 +60,7 @@ export default function KitchenDashboard() {
       .replace(/'/g, '&#039;');
   };
 
+  // Friendly pickup status mapping for receipts
   const buildPickupStatusLine = (order) => {
     const status = (order?.status || '').toUpperCase().trim();
     if (!status || status === 'N/A' || status === 'NOT PAID') return 'NOT PAID';
@@ -79,11 +82,27 @@ export default function KitchenDashboard() {
     const timeLine = escapeHtml(entry?.['Order Date'] || entry?.['Message Date'] || '');
     const customerName = escapeHtml(isMessage ? entry?.['Caller_Name'] : entry?.['Customer Name']);
     const phone = escapeHtml(isMessage ? entry?.['Caller_Phone'] : entry?.['Customer Contact Number']);
-    const total = escapeHtml(entry?.['Total Price']);
     const pickupTime = escapeHtml(entry?.['Pickup Time']);
     const deliveryAddress = escapeHtml(entry?.['Delivery Address']);
     const instructions = escapeHtml(entry?.['Order Instructions']);
     const reason = escapeHtml(entry?.['Message_Reason']);
+
+    // ✅ Fees (support either key style)
+    const serviceFeeRaw = entry?.serviceFee ?? entry?.['Service Fee'];
+    const deliveryFeeRaw = entry?.deliveryFee ?? entry?.['Delivery Fee'];
+    const serviceFee = escapeHtml(serviceFeeRaw !== undefined && serviceFeeRaw !== null ? String(serviceFeeRaw) : '');
+    const deliveryFee = escapeHtml(deliveryFeeRaw !== undefined && deliveryFeeRaw !== null ? String(deliveryFeeRaw) : '');
+
+    const total = escapeHtml(entry?.['Total Price']);
+
+    // ✅ STATUS (under Order # for both PICK UP + DELIVERY)
+    const rawStatus = (entry?.status ?? entry?.Status ?? '').toString().trim();
+    const statusText = isMessage
+      ? 'N/A'
+      : (String(orderType).toUpperCase() === 'PICK UP'
+          ? buildPickupStatusLine(entry)
+          : (rawStatus ? rawStatus.toUpperCase() : 'N/A'));
+    const status = escapeHtml(statusText);
 
     const items = (entry?.['Order Items'] || '')
       .split(',')
@@ -91,11 +110,6 @@ export default function KitchenDashboard() {
       .filter(Boolean)
       .map((x) => `<div class="item">• ${escapeHtml(x)}</div>`)
       .join('');
-
-    const pickupStatusBlock =
-      !isMessage && String(orderType).toUpperCase() === 'PICK UP'
-        ? `<div class="row"><span class="label">STATUS:</span><span class="value">${escapeHtml(buildPickupStatusLine(entry))}</span></div>`
-        : '';
 
     const deliveryBlock =
       !isMessage && String(orderType).toLowerCase() === 'delivery'
@@ -135,18 +149,27 @@ export default function KitchenDashboard() {
         `
         : '';
 
+    // ✅ Fees BEFORE Total
+    const feesBlock =
+      !isMessage
+        ? `
+          ${serviceFee ? `<div class="row"><span class="label">SERVICE FEE</span><span class="value">${serviceFee}</span></div>` : ''}
+          ${deliveryFee ? `<div class="row"><span class="label">DELIVERY FEE</span><span class="value">${deliveryFee}</span></div>` : ''}
+        `
+        : '';
+
     const totalBlock =
       !isMessage
         ? `
           <div class="hr"></div>
-          <div class="row">
+          ${feesBlock}
+          <div class="row" style="margin-top:4px;">
             <span class="label">TOTAL</span>
             <span class="big">${total || 'N/A'}</span>
           </div>
         `
         : '';
 
-    // ✅ STRICT 58mm + bigger Order # / Type / Customer name
     const html = `
       <!doctype html>
       <html>
@@ -163,9 +186,7 @@ export default function KitchenDashboard() {
             }
 
             /* Strict 58mm-safe width */
-            .receipt {
-              width: 220px;
-            }
+            .receipt { width: 220px; }
 
             .center { text-align: center; }
             .hr { border-top: 1px dashed #000; margin: 8px 0; }
@@ -176,11 +197,17 @@ export default function KitchenDashboard() {
               letter-spacing: 0.3px;
             }
 
-            /* Bigger lines requested */
             .orderNo {
               font-size: 15px;
               font-weight: 900;
               margin-top: 6px;
+            }
+
+            /* ✅ STATUS line under Order # */
+            .statusBig {
+              font-size: 13px;
+              font-weight: 900;
+              margin-top: 4px;
             }
 
             .typeBig {
@@ -196,6 +223,7 @@ export default function KitchenDashboard() {
             }
 
             .label { font-weight: 800; }
+            .value { font-weight: 700; }
             .big { font-size: 14px; font-weight: 900; }
 
             .row {
@@ -204,8 +232,6 @@ export default function KitchenDashboard() {
               gap: 8px;
               margin: 2px 0;
             }
-
-            .value { font-weight: 700; }
 
             .items { margin-top: 4px; }
             .item { margin: 2px 0; }
@@ -233,7 +259,7 @@ export default function KitchenDashboard() {
             <div class="center title">${escapeHtml(title)}</div>
 
             <div class="center orderNo">${escapeHtml(orderNumberLine)}</div>
-
+            <div class="center statusBig">STATUS: ${status}</div>
             <div class="center typeBig">TYPE: ${escapeHtml(orderType)}</div>
 
             <div class="hr"></div>
@@ -251,7 +277,6 @@ export default function KitchenDashboard() {
               <span class="mono wrap" style="text-align:right;">${timeLine || ''}</span>
             </div>
 
-            ${pickupStatusBlock}
             ${messageBlock}
             ${deliveryBlock}
             ${pickupBlock}
@@ -285,6 +310,9 @@ export default function KitchenDashboard() {
     }
   };
 
+  // =========================
+  // ✅ ARCHIVING
+  // =========================
   const archiveOldOrders = async () => {
     const res = await fetch('https://privitipizza41-default-rtdb.firebaseio.com/orders.json');
     const data = await res.json();
@@ -318,14 +346,17 @@ export default function KitchenDashboard() {
     }
   };
 
+  // =========================
+  // ✅ AUDIO INIT
+  // =========================
   useEffect(() => {
     alarmAudio.current = new Audio('/alert.mp3');
     alarmAudio.current.load();
     messageAudio.current = new Audio('/message-alert.mp3');
     messageAudio.current.load();
 
-    messageAudio.current.onplay = () => console.log("🔊 message-alert.mp3 is playing");
-    messageAudio.current.onerror = (e) => console.warn("❌ message-alert.mp3 failed to play", e);
+    messageAudio.current.onplay = () => console.log('🔊 message-alert.mp3 is playing');
+    messageAudio.current.onerror = (e) => console.warn('❌ message-alert.mp3 failed to play', e);
   }, []);
 
   useEffect(() => {
@@ -333,6 +364,9 @@ export default function KitchenDashboard() {
     return () => clearInterval(timer);
   }, []);
 
+  // =========================
+  // ✅ FETCH LOOP
+  // =========================
   useEffect(() => {
     if (!audioEnabled) return;
 
@@ -341,24 +375,26 @@ export default function KitchenDashboard() {
       const data = await res.json();
 
       let orderArray = Object.entries(data || {}).map(([id, order]) => ({ id, ...order }));
-      orderArray = orderArray.filter(o => o?.locationID === LOCATION_ID);
+      orderArray = orderArray.filter((o) => o?.locationID === LOCATION_ID);
 
-      orderArray.sort((a, b) =>
-        new Date(formatDate(b['Order Date'] || b['Message Date'])) -
-        new Date(formatDate(a['Order Date'] || a['Message Date']))
+      orderArray.sort(
+        (a, b) =>
+          new Date(formatDate(b['Order Date'] || b['Message Date'])) -
+          new Date(formatDate(a['Order Date'] || a['Message Date']))
       );
 
       setOrders(orderArray);
 
-      const newUnseenOrder = orderArray.find(order =>
-        !seenOrders.has(order.id) &&
-        !accepted.has(order.id) &&
-        order['Order Type'] !== 'MESSAGE' &&
-        order['Order Items']
+      const newUnseenOrder = orderArray.find(
+        (order) =>
+          !seenOrders.has(order.id) &&
+          !accepted.has(order.id) &&
+          order['Order Type'] !== 'MESSAGE' &&
+          order['Order Items']
       );
 
       if (newUnseenOrder) {
-        setSeenOrders(prev => {
+        setSeenOrders((prev) => {
           const updated = new Set(prev).add(newUnseenOrder.id);
           localStorage.setItem('seenOrders', JSON.stringify(Array.from(updated)));
           return updated;
@@ -366,16 +402,16 @@ export default function KitchenDashboard() {
 
         if (alarmAudio.current) {
           alarmAudio.current.currentTime = 0;
-          alarmAudio.current.play().catch(err => console.warn("❌ alert.mp3 playback failed", err));
+          alarmAudio.current.play().catch((err) => console.warn('❌ alert.mp3 playback failed', err));
         }
       }
 
-      const newUnseenMessage = orderArray.find(order =>
-        order['Order Type'] === 'MESSAGE' && !seenMessages.has(order.id)
+      const newUnseenMessage = orderArray.find(
+        (order) => order['Order Type'] === 'MESSAGE' && !seenMessages.has(order.id)
       );
 
       if (newUnseenMessage) {
-        setSeenMessages(prev => {
+        setSeenMessages((prev) => {
           const updated = new Set(prev).add(newUnseenMessage.id);
           localStorage.setItem('seenMessages', JSON.stringify(Array.from(updated)));
           return updated;
@@ -383,7 +419,7 @@ export default function KitchenDashboard() {
 
         if (messageAudio.current) {
           messageAudio.current.currentTime = 0;
-          messageAudio.current.play().catch(err => console.warn("❌ message-alert.mp3 playback failed", err));
+          messageAudio.current.play().catch((err) => console.warn('❌ message-alert.mp3 playback failed', err));
         }
       }
     };
@@ -393,9 +429,12 @@ export default function KitchenDashboard() {
     return () => clearInterval(interval);
   }, [audioEnabled, accepted, seenOrders, seenMessages]);
 
+  // =========================
+  // ✅ ACTIONS
+  // =========================
   const acceptOrder = async (id) => {
     const timestamp = new Date().toISOString();
-    setAccepted(prev => {
+    setAccepted((prev) => {
       const updated = new Set(prev).add(id);
       localStorage.setItem('acceptedOrders', JSON.stringify(Array.from(updated)));
       return updated;
@@ -403,24 +442,27 @@ export default function KitchenDashboard() {
     await fetch(`https://privitipizza41-default-rtdb.firebaseio.com/orders/${id}.json`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ "Accepted At": timestamp })
+      body: JSON.stringify({ 'Accepted At': timestamp })
     });
   };
 
   const markMessageAsRead = (id) => {
-    setReadMessages(prev => {
+    setReadMessages((prev) => {
       const updated = new Set(prev).add(id);
       localStorage.setItem('readMessages', JSON.stringify(Array.from(updated)));
       return updated;
     });
   };
 
+  // =========================
+  // ✅ START SCREEN
+  // =========================
   if (!audioEnabled) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <h1>Orders and Messages Dashboard</h1>
         <p>Please click the button below to start the dashboard and enable sound alerts.</p>
-        <p>(c) 2026 AvaiaConnects.com (RT7 USA Incorporated). All rights reserved.</p>
+        <p>(c) 2026 AvaiaConnects.com - All rights reserved.</p>
         <button
           onClick={async () => {
             try {
@@ -433,7 +475,7 @@ export default function KitchenDashboard() {
                 messageAudio.current.play().then(() => messageAudio.current.pause());
               }
             } catch (err) {
-              console.warn("⚠️ Error during dashboard startup:", err);
+              console.warn('⚠️ Error during dashboard startup:', err);
             }
           }}
           style={{ fontSize: '1.2rem', padding: '0.5rem 1rem' }}
@@ -447,7 +489,7 @@ export default function KitchenDashboard() {
   const today = new Date();
   const todayStr = formatDate(today.toString());
 
-  const displayedOrders = orders.filter(order => {
+  const displayedOrders = orders.filter((order) => {
     const isAcceptedOrder = accepted.has(order.id);
     const isInDateRange = formatDate(order['Order Date']) === todayStr;
     return showAccepted
@@ -455,27 +497,31 @@ export default function KitchenDashboard() {
       : !isAcceptedOrder && isInDateRange && order['Order Type'] !== 'MESSAGE';
   });
 
-  const displayedMessages = orders.filter(order =>
-    order['Order Type'] === 'MESSAGE' &&
-    formatDate(order['Message Date']) === todayStr &&
-    (showReadMessages ? readMessages.has(order.id) : !readMessages.has(order.id))
+  const displayedMessages = orders.filter(
+    (order) =>
+      order['Order Type'] === 'MESSAGE' &&
+      formatDate(order['Message Date']) === todayStr &&
+      (showReadMessages ? readMessages.has(order.id) : !readMessages.has(order.id))
   );
 
   return (
     <div style={{ padding: '1rem', fontFamily: 'Arial' }}>
       <h1>Orders and Messages - Delicacies Gourmet</h1>
-      <p><strong>Date:</strong> {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <p>
+        <strong>Date:</strong>{' '}
+        {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+      </p>
 
       {/* Control buttons */}
       <button
-        onClick={() => setShowAccepted(prev => !prev)}
+        onClick={() => setShowAccepted((prev) => !prev)}
         style={{ marginRight: '1rem', backgroundColor: 'red', color: 'white', padding: '0.5rem 1rem' }}
       >
         {showAccepted ? 'Hide Accepted Orders' : 'View Accepted Orders'}
       </button>
 
       <button
-        onClick={() => setShowReadMessages(prev => !prev)}
+        onClick={() => setShowReadMessages((prev) => !prev)}
         style={{ backgroundColor: '#6c757d', color: 'white', padding: '0.5rem 1rem' }}
       >
         {showReadMessages ? 'Hide Read Messages' : 'View Read Messages'}
@@ -488,19 +534,16 @@ export default function KitchenDashboard() {
             const data = await res.json();
             const allArchived = [];
             Object.entries(data || {}).forEach(([dateKey, entries]) => {
-              Object.entries(entries).forEach(([id, entry]) => {
+              Object.entries(entries || {}).forEach(([id, entry]) => {
                 if (entry?.locationID === LOCATION_ID) {
                   allArchived.push({ ...entry, id, archiveDate: dateKey });
                 }
               });
             });
-            allArchived.sort((a, b) =>
-              new Date(b['Order Date'] || b['Message Date']) -
-              new Date(a['Order Date'] || a['Message Date'])
-            );
+            allArchived.sort((a, b) => new Date(b['Order Date'] || b['Message Date']) - new Date(a['Order Date'] || a['Message Date']));
             setArchivedEntries(allArchived);
           }
-          setShowArchived(prev => !prev);
+          setShowArchived((prev) => !prev);
         }}
         style={{ backgroundColor: '#28a745', color: 'white', padding: '0.5rem 1rem', marginLeft: '1rem' }}
       >
@@ -508,8 +551,17 @@ export default function KitchenDashboard() {
       </button>
 
       {/* Messages */}
-      {displayedMessages.map(message => (
-        <div key={message.id} style={{ backgroundColor: '#fff3f4', border: '2px solid #ff4081', padding: '1rem', borderRadius: '8px', marginTop: '1rem' }}>
+      {displayedMessages.map((message) => (
+        <div
+          key={message.id}
+          style={{
+            backgroundColor: '#fff3f4',
+            border: '2px solid #ff4081',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginTop: '1rem'
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
             <h2 style={{ margin: 0 }}>📨 {showReadMessages ? 'Read Message' : 'New Message'}</h2>
             <button
@@ -519,14 +571,30 @@ export default function KitchenDashboard() {
               PRINT
             </button>
           </div>
-          <p><strong>Time:</strong> {message['Message Date'] || 'N/A'}</p>
-          <p><strong>Caller Name:</strong> {message['Caller_Name'] || 'N/A'}</p>
-          <p><strong>Caller Phone:</strong> {message['Caller_Phone'] || 'N/A'}</p>
-          <p><strong>Reason:</strong> {message['Message_Reason'] || 'N/A'}</p>
+
+          <p>
+            <strong>Time:</strong> {message['Message Date'] || 'N/A'}
+          </p>
+          <p>
+            <strong>Caller Name:</strong> {message['Caller_Name'] || 'N/A'}
+          </p>
+          <p>
+            <strong>Caller Phone:</strong> {message['Caller_Phone'] || 'N/A'}
+          </p>
+          <p>
+            <strong>Reason:</strong> {message['Message_Reason'] || 'N/A'}
+          </p>
           {!showReadMessages && (
             <button
               onClick={() => markMessageAsRead(message.id)}
-              style={{ marginTop: '0.5rem', backgroundColor: '#d6336c', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px' }}
+              style={{
+                marginTop: '0.5rem',
+                backgroundColor: '#d6336c',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                border: 'none',
+                borderRadius: '4px'
+              }}
             >
               Mark As Read
             </button>
@@ -536,8 +604,17 @@ export default function KitchenDashboard() {
 
       {/* Orders */}
       <div style={{ display: 'grid', gap: '1rem', marginTop: '2rem' }}>
-        {displayedOrders.map(order => (
-          <div key={order.id} style={{ backgroundColor: '#e6f9e6', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px', fontSize: '1.2rem' }}>
+        {displayedOrders.map((order) => (
+          <div
+            key={order.id}
+            style={{
+              backgroundColor: '#e6f9e6',
+              border: '1px solid #ccc',
+              padding: '1.5rem',
+              borderRadius: '8px',
+              fontSize: '1.2rem'
+            }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
               <h2 style={{ margin: 0 }}>Order #{order['Order ID']}</h2>
               <button
@@ -548,70 +625,106 @@ export default function KitchenDashboard() {
               </button>
             </div>
 
-            <p><strong>Customer:</strong> {order['Customer Name']}</p>
-            <p><strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}</p>
-            <p><strong>Order Type:</strong> {order['Order Type'] || 'N/A'}</p>
+            <p>
+              <strong>Customer:</strong> {order['Customer Name']}
+            </p>
+            <p>
+              <strong>Phone:</strong> {order['Customer Contact Number'] || 'N/A'}
+            </p>
+            <p>
+              <strong>Order Type:</strong> {order['Order Type'] || 'N/A'}
+            </p>
 
-            {/* Delivery details (unchanged) */}
+            {/* Delivery details */}
             {order['Order Type']?.toLowerCase() === 'delivery' && (
               <>
-                <p><strong>Delivery Address:</strong> {order['Delivery Address']}</p>
-                <p><strong>Order Instructions:</strong> {order['Order Instructions'] || 'N/A'}</p>
-                <p><strong>Status:</strong> {order.status || 'N/A'}</p>
-                <p><strong>Paid At:</strong> {order.PaidAt || 'N/A'}</p>
-                <p><strong>Payment ID:</strong> {order.paymentIntentId || 'N/A'}</p>
-                <p><strong>Checkout Session ID:</strong> {order.checkoutSessionId || 'N/A'}</p>
+                <p>
+                  <strong>Delivery Address:</strong> {order['Delivery Address'] || 'N/A'}
+                </p>
+                <p>
+                  <strong>Order Instructions:</strong> {order['Order Instructions'] || 'N/A'}
+                </p>
+
+                {/* ✅ FIX: status is stored as "status" in DB */}
+                <p>
+                  <strong>Status:</strong> {order.status || order.Status || 'N/A'}
+                </p>
+
+                <p>
+                  <strong>Paid At:</strong> {order.PaidAt || 'N/A'}
+                </p>
+
+                {/* Support both spellings just in case */}
+                <p>
+                  <strong>Payment ID:</strong> {order.paymentIntentId || order.paymentIntendId || 'N/A'}
+                </p>
+
+                <p>
+                  <strong>Checkout Session ID:</strong> {order.checkoutSessionId || 'N/A'}
+                </p>
               </>
             )}
 
             {/* ✅ Status message with color badge for PICK UP orders */}
-            {order['Order Type'] === 'PICK UP' && (() => {
-              const status = (order.status || '').toUpperCase().trim();
-              let statusMessage = '';
-              let statusColor = 'black';
-              let badge = '⚪';
+            {order['Order Type'] === 'PICK UP' &&
+              (() => {
+                const status = (order.status || '').toUpperCase().trim();
+                let statusMessage = '';
+                let statusColor = 'black';
+                let badge = '⚪';
 
-              if (!status || status === 'N/A' || status === 'NOT PAID') {
-                statusMessage = 'Order Not Paid';
-                statusColor = '#f0ad4e';
-                badge = '🟡';
-              } else if (status === 'PENDING') {
-                statusMessage = 'Customer Completing Payment - Stand By';
-                statusColor = '#ffc107';
-                badge = '🟠';
-              } else if (status === 'PAID') {
-                statusMessage = 'Customer Has Completed Payment - Proceed with Order';
-                statusColor = '#28a745';
-                badge = '🟢';
-              } else if (status === 'CANCELED' || status === 'FAILED') {
-                statusMessage = 'Payment Failed - Contact the Customer to Confirm Order';
-                statusColor = '#dc3545';
-                badge = '🔴';
-              }
+                if (!status || status === 'N/A' || status === 'NOT PAID') {
+                  statusMessage = 'Order Not Paid';
+                  statusColor = '#f0ad4e';
+                  badge = '🟡';
+                } else if (status === 'PENDING') {
+                  statusMessage = 'Customer Completing Payment - Stand By';
+                  statusColor = '#ffc107';
+                  badge = '🟠';
+                } else if (status === 'PAID') {
+                  statusMessage = 'Customer Has Completed Payment - Proceed with Order';
+                  statusColor = '#28a745';
+                  badge = '🟢';
+                } else if (status === 'CANCELED' || status === 'FAILED') {
+                  statusMessage = 'Payment Failed - Contact the Customer to Confirm Order';
+                  statusColor = '#dc3545';
+                  badge = '🔴';
+                }
 
-              return (
-                <p style={{ color: statusColor, fontWeight: 'bold', marginTop: '0.5rem' }}>
-                  <strong>Status:</strong> {badge} {statusMessage}
-                </p>
-              );
-            })()}
+                return (
+                  <p style={{ color: statusColor, fontWeight: 'bold', marginTop: '0.5rem' }}>
+                    <strong>Status:</strong> {badge} {statusMessage}
+                  </p>
+                );
+              })()}
 
-            <p><strong>Order Date:</strong> {order['Order Date']}</p>
+            <p>
+              <strong>Order Date:</strong> {order['Order Date']}
+            </p>
             {!showAccepted && order['Order Date'] && (
-              <p><strong>Elapsed Time:</strong> <span style={{ color: 'goldenrod' }}>{getElapsedTime(order['Order Date'])}</span></p>
+              <p>
+                <strong>Elapsed Time:</strong>{' '}
+                <span style={{ color: 'goldenrod' }}>{getElapsedTime(order['Order Date'])}</span>
+              </p>
             )}
             {showAccepted && order['Accepted At'] && (
               <p style={{ color: 'green', fontWeight: 'bold' }}>
                 <strong>Accepted At:</strong> {new Date(order['Accepted At']).toLocaleString()}
               </p>
             )}
-            <p style={{ color: 'red', fontWeight: 'bold' }}><strong>Pickup Time:</strong> {order['Pickup Time']}</p>
-            <p><strong>Total:</strong> {order['Total Price']}</p>
+            <p style={{ color: 'red', fontWeight: 'bold' }}>
+              <strong>Pickup Time:</strong> {order['Pickup Time']}
+            </p>
+            <p>
+              <strong>Total:</strong> {order['Total Price']}
+            </p>
+
             <ul>
               {order['Order Items']?.split(',').map((item, index) => (
                 <li key={index}>{item.trim()}</li>
               ))}
             </ul>
+
             {!accepted.has(order.id) && (
               <button
                 onClick={() => acceptOrder(order.id)}
@@ -631,14 +744,20 @@ export default function KitchenDashboard() {
         ))}
       </div>
 
+      {/* Archived */}
       {showArchived && (
         <div style={{ marginTop: '2rem' }}>
           <h2>📦 Archived Orders & Messages</h2>
           <div style={{ display: 'grid', gap: '1rem' }}>
-            {archivedEntries.map(entry => (
-              <div key={entry.id} style={{ backgroundColor: '#f0f0f0', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px' }}>
+            {archivedEntries.map((entry) => (
+              <div
+                key={entry.id}
+                style={{ backgroundColor: '#f0f0f0', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px' }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
-                  <h3 style={{ margin: 0 }}>{entry['Order Type'] === 'MESSAGE' ? '📨 Message' : `Order #${entry['Order ID'] || entry.id}`}</h3>
+                  <h3 style={{ margin: 0 }}>
+                    {entry['Order Type'] === 'MESSAGE' ? '📨 Message' : `Order #${entry['Order ID'] || entry.id}`}
+                  </h3>
                   <button
                     onClick={() => printEntry(entry)}
                     style={{ backgroundColor: '#0d6efd', color: 'white', padding: '0.4rem 0.8rem', border: 'none', borderRadius: '4px' }}
@@ -647,33 +766,73 @@ export default function KitchenDashboard() {
                   </button>
                 </div>
 
-                <p><strong>Date:</strong> {entry['Order Date'] || entry['Message Date'] || 'N/A'}</p>
+                <p>
+                  <strong>Date:</strong> {entry['Order Date'] || entry['Message Date'] || 'N/A'}
+                </p>
+
                 {entry['Order Type'] === 'MESSAGE' ? (
                   <>
-                    <p><strong>Caller Name:</strong> {entry['Caller_Name']}</p>
-                    <p><strong>Caller Phone:</strong> {entry['Caller_Phone']}</p>
-                    <p><strong>Reason:</strong> {entry['Message_Reason']}</p>
+                    <p>
+                      <strong>Caller Name:</strong> {entry['Caller_Name']}
+                    </p>
+                    <p>
+                      <strong>Caller Phone:</strong> {entry['Caller_Phone']}
+                    </p>
+                    <p>
+                      <strong>Reason:</strong> {entry['Message_Reason']}
+                    </p>
                   </>
                 ) : (
                   <>
-                    <p><strong>Customer:</strong> {entry['Customer Name']}</p>
-                    <p><strong>Phone:</strong> {entry['Customer Contact Number'] || 'N/A'}</p>
-                    <p><strong>Order Type:</strong> {entry['Order Type']}</p>
+                    <p>
+                      <strong>Customer:</strong> {entry['Customer Name']}
+                    </p>
+                    <p>
+                      <strong>Phone:</strong> {entry['Customer Contact Number'] || 'N/A'}
+                    </p>
+                    <p>
+                      <strong>Order Type:</strong> {entry['Order Type']}
+                    </p>
+
                     {entry['Order Type']?.toLowerCase() === 'delivery' && (
                       <>
-                        <p><strong>Delivery Address:</strong> {entry['Delivery Address']}</p>
-                        <p><strong>Order Instructions:</strong> {entry['Order Instructions'] || 'N/A'}</p>
-                        <p><strong>Status:</strong> {entry.status || 'N/A'}</p>
-                        <p><strong>Paid At:</strong> {entry.PaidAt || 'N/A'}</p>
-                        <p><strong>Payment ID:</strong> {entry.paymentIntentId || 'N/A'}</p>
-                        <p><strong>Checkout Session ID:</strong> {entry.checkoutSessionId || 'N/A'}</p>
+                        <p>
+                          <strong>Delivery Address:</strong> {entry['Delivery Address']}
+                        </p>
+                        <p>
+                          <strong>Order Instructions:</strong> {entry['Order Instructions'] || 'N/A'}
+                        </p>
+
+                        {/* ✅ FIX: status stored as "status" */}
+                        <p>
+                          <strong>Status:</strong> {entry.status || entry.Status || 'N/A'}
+                        </p>
+
+                        <p>
+                          <strong>Paid At:</strong> {entry.PaidAt || 'N/A'}
+                        </p>
+                        <p>
+                          <strong>Payment ID:</strong> {entry.paymentIntentId || entry.paymentIntendId || 'N/A'}
+                        </p>
+                        <p>
+                          <strong>Checkout Session ID:</strong> {entry.checkoutSessionId || 'N/A'}
+                        </p>
                       </>
                     )}
+
                     {entry['Order Type']?.toLowerCase() !== 'delivery' && entry['Delivery Address'] && (
-                      <p><strong>Delivery Address:</strong> {entry['Delivery Address']}</p>
+                      <p>
+                        <strong>Delivery Address:</strong> {entry['Delivery Address']}
+                      </p>
                     )}
-                    <p><strong>Pickup Time:</strong> {entry['Pickup Time']}</p>
-                    <p><strong>Total:</strong> {entry['Total Price']}</p>
+
+                    <p>
+                      <strong>Pickup Time:</strong> {entry['Pickup Time']}
+                    </p>
+                    <p>
+                      <strong>Total:</strong> {entry['Total Price']}
+                    </p>
+
                     <ul>
                       {entry['Order Items']?.split(',').map((item, index) => (
                         <li key={index}>{item.trim()}</li>
