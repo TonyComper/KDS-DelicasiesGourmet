@@ -557,7 +557,7 @@ export default function KitchenDashboard() {
               <>
                 <p><strong>Delivery Address:</strong> {order['Delivery Address']}</p>
                 <p><strong>Order Instructions:</strong> {order['Order Instructions'] || 'N/A'}</p>
-                <p><strong>Status:</strong> {order.Status || 'N/A'}</p>
+                <p><strong>Status:</strong> {order.status || 'N/A'}</p>
                 <p><strong>Paid At:</strong> {order.PaidAt || 'N/A'}</p>
                 <p><strong>Payment ID:</strong> {order.paymentIntentId || 'N/A'}</p>
                 <p><strong>Checkout Session ID:</strong> {order.checkoutSessionId || 'N/A'}</p>
@@ -663,7 +663,7 @@ export default function KitchenDashboard() {
                       <>
                         <p><strong>Delivery Address:</strong> {entry['Delivery Address']}</p>
                         <p><strong>Order Instructions:</strong> {entry['Order Instructions'] || 'N/A'}</p>
-                        <p><strong>Status:</strong> {entry.Status || 'N/A'}</p>
+                        <p><strong>Status:</strong> {entry.status || 'N/A'}</p>
                         <p><strong>Paid At:</strong> {entry.PaidAt || 'N/A'}</p>
                         <p><strong>Payment ID:</strong> {entry.paymentIntentId || 'N/A'}</p>
                         <p><strong>Checkout Session ID:</strong> {entry.checkoutSessionId || 'N/A'}</p>
