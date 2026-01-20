@@ -23,12 +23,21 @@ export default function KitchenDashboard() {
     return /Chrome/.test(userAgent) && !/Edge|Edg|OPR|Brave|Chromium/.test(userAgent);
   };
 
+  // ✅ FIX: normalize date string for ALL browsers (Safari too)
   const formatDate = (rawDateStr) => {
     if (!rawDateStr) return '';
-    let cleanStr = String(rawDateStr);
-    if (isChrome()) {
-      cleanStr = cleanStr.replace(/\s+at\s+/, ' ').replace(/\s*\([^)]*\)/g, '').trim();
+
+    // If a Date object is passed, handle it directly
+    if (rawDateStr instanceof Date) {
+      const d = rawDateStr;
+      return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
     }
+
+    let cleanStr = String(rawDateStr);
+
+    // Normalize " at " and remove timezone parentheses across all browsers
+    cleanStr = cleanStr.replace(/\s+at\s+/i, ' ').replace(/\s*\([^)]*\)/g, '').trim();
+
     const d = new Date(cleanStr);
     if (isNaN(d)) return 'Invalid date';
     return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
@@ -36,10 +45,10 @@ export default function KitchenDashboard() {
 
   const getElapsedTime = (rawDateStr) => {
     if (!rawDateStr) return 'Invalid date';
-    let cleanStr = String(rawDateStr);
-    if (isChrome()) {
-      cleanStr = cleanStr.replace(/\s+at\s+/, ' ').replace(/\s*\([^)]*\)/g, '').trim();
-    }
+
+    // ✅ FIX: normalize for ALL browsers (Safari too)
+    let cleanStr = String(rawDateStr).replace(/\s+at\s+/i, ' ').replace(/\s*\([^)]*\)/g, '').trim();
+
     const orderDate = new Date(cleanStr);
     if (isNaN(orderDate)) return 'Invalid date';
     const elapsed = now - orderDate;
@@ -99,9 +108,11 @@ export default function KitchenDashboard() {
     const rawStatus = (entry?.status ?? entry?.Status ?? '').toString().trim();
     const statusText = isMessage
       ? 'N/A'
-      : (String(orderType).toUpperCase() === 'PICK UP'
-          ? buildPickupStatusLine(entry)
-          : (rawStatus ? rawStatus.toUpperCase() : 'N/A'));
+      : String(orderType).toUpperCase() === 'PICK UP'
+      ? buildPickupStatusLine(entry)
+      : rawStatus
+      ? rawStatus.toUpperCase()
+      : 'N/A';
     const status = escapeHtml(statusText);
 
     const items = (entry?.['Order Items'] || '')
@@ -318,14 +329,23 @@ export default function KitchenDashboard() {
     const data = await res.json();
     if (!data) return;
 
-    const todayStr = formatDate(new Date().toString());
+    // ✅ FIX: compute today using Date object
+    const todayStr = formatDate(new Date());
 
     for (const [id, entry] of Object.entries(data)) {
       if (entry?.locationID !== LOCATION_ID) continue;
 
       const rawDate = entry['Order Date'] || entry['Message Date'];
       if (!rawDate) continue;
+
       const entryDateStr = formatDate(rawDate);
+
+      // ✅ EXTRA SAFETY: if date can't be parsed, do NOT archive/delete
+      if (entryDateStr === 'Invalid date') {
+        console.warn(`⚠️ Skipping archive for ${id} because date could not be parsed:`, rawDate);
+        continue;
+      }
+
       if (entryDateStr === todayStr) continue;
 
       const archiveCheck = await fetch(`https://privitipizza41-default-rtdb.firebaseio.com/archive/${entryDateStr}/${id}.json`);
@@ -406,9 +426,7 @@ export default function KitchenDashboard() {
         }
       }
 
-      const newUnseenMessage = orderArray.find(
-        (order) => order['Order Type'] === 'MESSAGE' && !seenMessages.has(order.id)
-      );
+      const newUnseenMessage = orderArray.find((order) => order['Order Type'] === 'MESSAGE' && !seenMessages.has(order.id));
 
       if (newUnseenMessage) {
         setSeenMessages((prev) => {
@@ -540,7 +558,9 @@ export default function KitchenDashboard() {
                 }
               });
             });
-            allArchived.sort((a, b) => new Date(b['Order Date'] || b['Message Date']) - new Date(a['Order Date'] || a['Message Date']));
+            allArchived.sort(
+              (a, b) => new Date(b['Order Date'] || b['Message Date']) - new Date(a['Order Date'] || a['Message Date'])
+            );
             setArchivedEntries(allArchived);
           }
           setShowArchived((prev) => !prev);
@@ -566,7 +586,13 @@ export default function KitchenDashboard() {
             <h2 style={{ margin: 0 }}>📨 {showReadMessages ? 'Read Message' : 'New Message'}</h2>
             <button
               onClick={() => printEntry(message)}
-              style={{ backgroundColor: '#0d6efd', color: 'white', padding: '0.4rem 0.8rem', border: 'none', borderRadius: '4px' }}
+              style={{
+                backgroundColor: '#0d6efd',
+                color: 'white',
+                padding: '0.4rem 0.8rem',
+                border: 'none',
+                borderRadius: '4px'
+              }}
             >
               PRINT
             </button>
@@ -619,7 +645,13 @@ export default function KitchenDashboard() {
               <h2 style={{ margin: 0 }}>Order #{order['Order ID']}</h2>
               <button
                 onClick={() => printEntry(order)}
-                style={{ backgroundColor: '#0d6efd', color: 'white', padding: '0.4rem 0.8rem', border: 'none', borderRadius: '4px' }}
+                style={{
+                  backgroundColor: '#0d6efd',
+                  color: 'white',
+                  padding: '0.4rem 0.8rem',
+                  border: 'none',
+                  borderRadius: '4px'
+                }}
               >
                 PRINT
               </button>
@@ -703,8 +735,7 @@ export default function KitchenDashboard() {
             </p>
             {!showAccepted && order['Order Date'] && (
               <p>
-                <strong>Elapsed Time:</strong>{' '}
-                <span style={{ color: 'goldenrod' }}>{getElapsedTime(order['Order Date'])}</span>
+                <strong>Elapsed Time:</strong> <span style={{ color: 'goldenrod' }}>{getElapsedTime(order['Order Date'])}</span>
               </p>
             )}
             {showAccepted && order['Accepted At'] && (
@@ -755,12 +786,16 @@ export default function KitchenDashboard() {
                 style={{ backgroundColor: '#f0f0f0', border: '1px solid #ccc', padding: '1.5rem', borderRadius: '8px' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
-                  <h3 style={{ margin: 0 }}>
-                    {entry['Order Type'] === 'MESSAGE' ? '📨 Message' : `Order #${entry['Order ID'] || entry.id}`}
-                  </h3>
+                  <h3 style={{ margin: 0 }}>{entry['Order Type'] === 'MESSAGE' ? '📨 Message' : `Order #${entry['Order ID'] || entry.id}`}</h3>
                   <button
                     onClick={() => printEntry(entry)}
-                    style={{ backgroundColor: '#0d6efd', color: 'white', padding: '0.4rem 0.8rem', border: 'none', borderRadius: '4px' }}
+                    style={{
+                      backgroundColor: '#0d6efd',
+                      color: 'white',
+                      padding: '0.4rem 0.8rem',
+                      border: 'none',
+                      borderRadius: '4px'
+                    }}
                   >
                     PRINT
                   </button>
