@@ -48,6 +48,33 @@ const formatPhoneNumber = (value) => {
   return String(value);
 };
 
+const getItemizedItems = (order) => {
+  const rawItems =
+    order?.itemizedItems ||
+    order?.ItemizedItems ||
+    order?.['Itemized Items'];
+
+  if (!rawItems) return [];
+
+  if (Array.isArray(rawItems)) {
+    return rawItems.filter(Boolean);
+  }
+
+  if (typeof rawItems === 'object') {
+    return Object.values(rawItems).filter(Boolean);
+  }
+
+  return [];
+};
+
+const formatMoney = (value) => {
+  const number = Number(String(value ?? '').replace(/[^0-9.-]/g, ''));
+
+  if (!Number.isFinite(number)) return 'N/A';
+
+  return `$${number.toFixed(2)}`;
+};
+
   const isCreditDebitOrder = (order) => {
     const orderType = String(order?.['Order Type'] || '').toUpperCase().trim();
     const paymentMethod = String(order?.paymentMethod || '').toUpperCase().trim();
@@ -1117,19 +1144,70 @@ const formatPhoneNumber = (value) => {
                 Items Ordered
             </h2>
 
-            <ul
-                style={{
-                margin: 0,
-                paddingLeft: '1.5rem',
-                fontSize: '1.8rem',
-                fontWeight: 'bold',
-                lineHeight: '1.5'
-                }}
-            >
-                {order['Order Items']?.split(',').map((item, index) => (
-                <li key={index}>{item.trim()}</li>
-                ))}
-            </ul>
+{getItemizedItems(order).length > 0 ? (
+  <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+    {getItemizedItems(order).map((item, index) => (
+      <div
+        key={index}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '70px 1fr 120px',
+          gap: '0.75rem',
+          alignItems: 'center',
+          padding: '0.35rem 0',
+          borderBottom: '1px solid #ddd'
+        }}
+      >
+        <span>{item.quantity || 1} x</span>
+        <span>{item.name || 'Item'}</span>
+        <span style={{ textAlign: 'right' }}>{formatMoney(item.lineTotal || item.price)}</span>
+      </div>
+    ))}
+
+    <div
+      style={{
+        marginTop: '0.75rem',
+        paddingTop: '0.75rem',
+        borderTop: '2px solid #333',
+        display: 'grid',
+        gap: '0.35rem'
+      }}
+    >
+      {order.Subtotal !== undefined && order.Subtotal !== '' && (
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>Subtotal</span>
+          <span>{formatMoney(order.Subtotal)}</span>
+        </div>
+      )}
+
+      {(order.tax !== undefined || order.Tax !== undefined) && (
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>Tax</span>
+          <span>{formatMoney(order.tax ?? order.Tax)}</span>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.7rem' }}>
+        <span>Total</span>
+        <span>{formatMoney(order['Total Price'])}</span>
+      </div>
+    </div>
+  </div>
+) : (
+  <ul
+    style={{
+      margin: 0,
+      paddingLeft: '1.5rem',
+      fontSize: '1.8rem',
+      fontWeight: 'bold',
+      lineHeight: '1.5'
+    }}
+  >
+    {order['Order Items']?.split(',').map((item, index) => (
+      <li key={index}>{item.trim()}</li>
+    ))}
+  </ul>
+)}
             </div>
 
             <p style={{ fontSize: '1.6rem', fontWeight: 'bold' }}>
