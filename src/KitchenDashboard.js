@@ -64,6 +64,22 @@ const getItemizedItems = (order) => {
     return Object.values(rawItems).filter(Boolean);
   }
 
+  if (typeof rawItems === 'string') {
+    try {
+      const parsed = JSON.parse(rawItems);
+
+      if (Array.isArray(parsed)) {
+        return parsed.filter(Boolean);
+      }
+
+      if (parsed && typeof parsed === 'object') {
+        return Object.values(parsed).filter(Boolean);
+      }
+    } catch (err) {
+      console.warn('Could not parse itemizedItems JSON string:', err);
+    }
+  }
+
   return [];
 };
 
