@@ -21,7 +21,7 @@ export default function KitchenDashboard() {
   const paidAudio = useRef(null);
   const paidOrdersRef = useRef(new Set(JSON.parse(localStorage.getItem('paidOrders') || '[]')));
 
-  const LOCATION_ID = 'MEGCHK';
+  const LOCATION_ID = 'DELGMT';
   const FIREBASE_ORDERS_URL = 'https://privitipizza41-default-rtdb.firebaseio.com/orders';
   const FIREBASE_ARCHIVE_URL = 'https://privitipizza41-default-rtdb.firebaseio.com/archive';
   const CREATE_CHECKOUT_LINK_URL = 'https://createcheckoutlink-u6d6o7mcnq-uc.a.run.app/createCheckoutLink';
@@ -831,7 +831,7 @@ const formatPhoneNumber = (value) => {
 
   return (
     <div style={{ padding: '1rem', fontFamily: 'Arial' }}>
-      <h1>Orders and Messages - Mega Chicken Burlington</h1>
+      <h1>Orders and Messages - TEST DASHBOARD </h1>
 
       <p>
         <strong>Date:</strong>{' '}
